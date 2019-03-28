@@ -14,6 +14,22 @@ amongst others.
 See http://www.webrtc.org/native-code/development for instructions on how to get
 started developing with the native code.
 
+``` bash
+gn gen out/Release --args='use_rtti=true rtc_include_tests=false is_debug=false rtc_build_ssl=false rtc_ssl_root="../../obsdeps"'
+
+ninja -C out/Release
+
+mkdir ../include
+mkdir ../lib
+
+find . -iname "*.h" -exec rsync -R \{\} ../include/ \;
+
+cd out/Release/obj
+
+find . -iname "*.a" -exec rsync -R \{\} ../../../../lib/ \;
+#find . -iname "*.a" -exec cp \{\} ../../../../lib/ \; # if a library isn't found try this
+```
+
 [Authoritative list](native-api.md) of directories that contain the
 native API header files.
 
