@@ -84,6 +84,21 @@ struct SslCipherMapEntry {
 
 // The "SSL_CIPHER_standard_name" function is only available in OpenSSL when
 // compiled with tracing, so we need to define the mapping manually here.
+
+// TODO(josemrecio): kSslCipherMap should be in synch with kCiphers[] defined in
+//   webrtc/src/third_party/boringssl/src/ssl/ssl_cipher.cc
+// especially remove ciphers not included by BoringSSL
+
+#ifdef TLS1_CK_ECDHE_RSA_WITH_CHACHA20_POLY1305
+#define TLS1_CK_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 TLS1_CK_ECDHE_RSA_WITH_CHACHA20_POLY1305
+#define TLS1_TXT_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 TLS1_TXT_ECDHE_RSA_WITH_CHACHA20_POLY1305
+#endif
+
+#ifdef TLS1_CK_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+#define TLS1_CK_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 TLS1_CK_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+#define TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+#endif
+
 static const SslCipherMapEntry kSslCipherMap[] = {
     // TLS v1.0 ciphersuites from RFC2246.
     DEFINE_CIPHER_ENTRY_SSL3(RSA_RC4_128_SHA),
@@ -139,6 +154,15 @@ static const SslCipherMapEntry kSslCipherMap[] = {
     DEFINE_CIPHER_ENTRY_TLS1(ECDHE_ECDSA_WITH_AES_256_GCM_SHA384),
     DEFINE_CIPHER_ENTRY_TLS1(ECDHE_RSA_WITH_AES_128_GCM_SHA256),
     DEFINE_CIPHER_ENTRY_TLS1(ECDHE_RSA_WITH_AES_256_GCM_SHA384),
+
+    // CHACHA20
+#ifdef TLS1_CK_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+    DEFINE_CIPHER_ENTRY_TLS1(ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256),
+#endif
+
+#ifdef TLS1_CK_ECDHE_RSA_WITH_CHACHA20_POLY1305
+    DEFINE_CIPHER_ENTRY_TLS1(ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256),
+#endif
 
     {0, nullptr}};
 #endif  // #ifndef OPENSSL_IS_BORINGSSL
@@ -351,9 +375,10 @@ std::string OpenSSLStreamAdapter::SslCipherSuiteToName(int cipher_suite) {
   }
   return SSL_CIPHER_standard_name(ssl_cipher);
 #else
+  const int value_to_check = 0x03000000L | cipher_suite;
   for (const SslCipherMapEntry* entry = kSslCipherMap; entry->rfc_name;
        ++entry) {
-    if (cipher_suite == static_cast<int>(entry->openssl_id)) {
+    if (value_to_check == static_cast<int>(entry->openssl_id)) {
       return entry->rfc_name;
     }
   }
@@ -790,10 +815,13 @@ int OpenSSLStreamAdapter::BeginSSL() {
 #ifdef OPENSSL_IS_BORINGSSL
     DTLSv1_set_initial_timeout_duration(ssl_, dtls_handshake_timeout_ms_);
 #else
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+//    DTLSv1_set_initial_timeout_duration(ssl_, dtls_handshake_timeout_ms_); // breaks compilation. TODO: find comparable function in OpenSSL
+#endif
     // Enable read-ahead for DTLS so whole packets are read from internal BIO
     // before parsing. This is done internally by BoringSSL for DTLS.
     SSL_set_read_ahead(ssl_, 1);
-#endif
+#endif  // OPENSSL_IS_BORINGSSL
   }
 
   SSL_set_mode(ssl_, SSL_MODE_ENABLE_PARTIAL_WRITE |
@@ -946,9 +974,10 @@ void OpenSSLStreamAdapter::OnMessage(Message* msg) {
 SSL_CTX* OpenSSLStreamAdapter::SetupSSLContext() {
   SSL_CTX* ctx = nullptr;
 
-#ifdef OPENSSL_IS_BORINGSSL
+#if defined(OPENSSL_IS_BORINGSSL) || (OPENSSL_VERSION_NUMBER >= 0x10100000)
   ctx = SSL_CTX_new(ssl_mode_ == SSL_MODE_DTLS ? DTLS_method() : TLS_method());
 // Version limiting for BoringSSL will be done below.
+// Version limiting for OpenSSL 1.1.0 will be done below.
 #else
   const SSL_METHOD* method;
   switch (ssl_max_version_) {
@@ -993,7 +1022,7 @@ SSL_CTX* OpenSSLStreamAdapter::SetupSSLContext() {
   if (ctx == nullptr)
     return nullptr;
 
-#ifdef OPENSSL_IS_BORINGSSL
+#if defined(OPENSSL_IS_BORINGSSL)
   SSL_CTX_set_min_proto_version(
       ctx, ssl_mode_ == SSL_MODE_DTLS ? DTLS1_VERSION : TLS1_VERSION);
   switch (ssl_max_version_) {
@@ -1014,7 +1043,27 @@ SSL_CTX* OpenSSLStreamAdapter::SetupSSLContext() {
   if (g_use_time_callback_for_testing) {
     SSL_CTX_set_current_time_cb(ctx, &TimeCallbackForTesting);
   }
+#else
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000)
+  SSL_CTX_set_min_proto_version(
+      ctx, ssl_mode_ == SSL_MODE_DTLS ? DTLS1_VERSION : TLS1_VERSION);
+  switch (ssl_max_version_) {
+    case SSL_PROTOCOL_TLS_10:
+      SSL_CTX_set_max_proto_version(
+          ctx, ssl_mode_ == SSL_MODE_DTLS ? DTLS1_VERSION : TLS1_VERSION);
+      break;
+    case SSL_PROTOCOL_TLS_11:
+      SSL_CTX_set_max_proto_version(
+          ctx, ssl_mode_ == SSL_MODE_DTLS ? DTLS1_VERSION : TLS1_1_VERSION);
+      break;
+    case SSL_PROTOCOL_TLS_12:
+    default:
+      SSL_CTX_set_max_proto_version(
+          ctx, ssl_mode_ == SSL_MODE_DTLS ? DTLS1_2_VERSION : TLS1_2_VERSION);
+      break;
+  }
 #endif
+#endif  // OPENSSL_IS_BORINGSSL
 
   if (identity_ && !identity_->ConfigureIdentity(ctx)) {
     SSL_CTX_free(ctx);
@@ -1111,9 +1160,14 @@ int OpenSSLStreamAdapter::SSLVerifyCallback(X509_STORE_CTX* store, void* arg) {
   stream->peer_cert_chain_.reset(new SSLCertChain(std::move(cert_chain)));
 #else
   // Record the peer's certificate.
-  X509* cert = X509_STORE_CTX_get0_cert(store);
-  stream->peer_cert_chain_.reset(
-      new SSLCertChain(new OpenSSLCertificate(cert)));
+  STACK_OF(X509)* chain = X509_STORE_CTX_get0_untrusted(store);
+  // Creates certificate chain.
+  std::vector<std::unique_ptr<SSLCertificate>> cert_chain;
+  for (int i = 0; i < sk_X509_num(chain); i++) {
+    X509 *cert = sk_X509_value(chain, i);
+    cert_chain.emplace_back(new OpenSSLCertificate(cert));
+  }
+  stream->peer_cert_chain_.reset(new SSLCertChain(std::move(cert_chain)));
 #endif
 
   // If the peer certificate digest isn't known yet, we'll wait to verify

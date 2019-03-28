@@ -25,6 +25,9 @@
 #include <openssl/crypto.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
+#ifndef OPENSSL_IS_BORINGSSL
+#include <openssl/err.h>
+#endif
 
 #include "rtc_base/arraysize.h"
 #include "rtc_base/checks.h"

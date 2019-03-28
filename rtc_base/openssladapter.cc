@@ -32,6 +32,7 @@
 #include "rtc_base/thread.h"
 
 #ifndef OPENSSL_IS_BORINGSSL
+#if (OPENSSL_VERSION_NUMBER < 0x10100000)
 
 // TODO(benwright): Use a nicer abstraction for mutex.
 
@@ -57,6 +58,7 @@ struct CRYPTO_dynlock_value {
   MUTEX_TYPE mutex;
 };
 
+#endif  // #if (OPENSSL_VERSION_NUMBER < 0x10100000)
 #endif  // #ifndef OPENSSL_IS_BORINGSSL
 
 //////////////////////////////////////////////////////////////////////
@@ -370,6 +372,9 @@ int OpenSSLAdapter::BeginSSL() {
   // Set a couple common TLS extensions; even though we don't use them yet.
   SSL_enable_ocsp_stapling(ssl_);
   SSL_enable_signed_cert_timestamps(ssl_);
+#elif (OPENSSL_VERSION_NUMBER >= 0x10100000)
+  // requests OCSP stapled response as side-effect
+  SSL_enable_ct(ssl_, SSL_CT_VALIDATION_STRICT);
 #endif
 
   if (!alpn_protocols_.empty()) {
@@ -893,7 +898,7 @@ SSL_CTX* OpenSSLAdapter::CreateContext(SSLMode mode, bool enable_cache) {
   // (Default V1.0 to V1.2). However (D)TLSv1_2_client_method functions used
   // below in OpenSSL only support V1.2.
   SSL_CTX* ctx = nullptr;
-#ifdef OPENSSL_IS_BORINGSSL
+#if defined(OPENSSL_IS_BORINGSSL) || (OPENSSL_VERSION_NUMBER >= 0x10100000)
   ctx = SSL_CTX_new(mode == SSL_MODE_DTLS ? DTLS_method() : TLS_method());
 #else
   ctx = SSL_CTX_new(mode == SSL_MODE_DTLS ? DTLSv1_2_client_method()

@@ -227,7 +227,11 @@ SSL* CreateSSLWithPeerCertificate(const unsigned char* cert, size_t cert_len) {
 }  // namespace
 
 TEST(OpenSSLUtilityTest, VerifyPeerCertMatchesHostFailsOnNoPeerCertificate) {
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000)
+  SSL_CTX* ssl_ctx = SSL_CTX_new(DTLS_method());
+#else
   SSL_CTX* ssl_ctx = SSL_CTX_new(DTLSv1_2_client_method());
+#endif
   SSL* ssl = SSL_new(ssl_ctx);
 
   EXPECT_FALSE(openssl::VerifyPeerCertMatchesHost(ssl, "webrtc.org"));

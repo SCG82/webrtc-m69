@@ -18,10 +18,20 @@
 #include "rtc_base/openssl.h"
 #include "rtc_base/opensslsessioncache.h"
 
+// josemrecio - dirty workaround, this must be done properly
+#ifndef OPENSSL_IS_BORINGSSL
+#warning "SSL_SESSION_new should be properly addressed"
+#define SSL_SESSION_new(x) SSL_SESSION_new()
+#endif
+
 namespace rtc {
 
 TEST(OpenSSLSessionCache, DTLSModeSetCorrectly) {
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000)
+  SSL_CTX* ssl_ctx = SSL_CTX_new(DTLS_method());
+#else
   SSL_CTX* ssl_ctx = SSL_CTX_new(DTLSv1_2_client_method());
+#endif
 
   OpenSSLSessionCache session_cache(SSL_MODE_DTLS, ssl_ctx);
   EXPECT_EQ(session_cache.GetSSLMode(), SSL_MODE_DTLS);
@@ -30,7 +40,11 @@ TEST(OpenSSLSessionCache, DTLSModeSetCorrectly) {
 }
 
 TEST(OpenSSLSessionCache, TLSModeSetCorrectly) {
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000)
+  SSL_CTX* ssl_ctx = SSL_CTX_new(TLS_method());
+#else
   SSL_CTX* ssl_ctx = SSL_CTX_new(TLSv1_2_client_method());
+#endif
 
   OpenSSLSessionCache session_cache(SSL_MODE_TLS, ssl_ctx);
   EXPECT_EQ(session_cache.GetSSLMode(), SSL_MODE_TLS);
@@ -39,7 +53,11 @@ TEST(OpenSSLSessionCache, TLSModeSetCorrectly) {
 }
 
 TEST(OpenSSLSessionCache, SSLContextSetCorrectly) {
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000)
+  SSL_CTX* ssl_ctx = SSL_CTX_new(DTLS_method());
+#else
   SSL_CTX* ssl_ctx = SSL_CTX_new(DTLSv1_2_client_method());
+#endif
 
   OpenSSLSessionCache session_cache(SSL_MODE_DTLS, ssl_ctx);
   EXPECT_EQ(session_cache.GetSSLContext(), ssl_ctx);
@@ -48,7 +66,11 @@ TEST(OpenSSLSessionCache, SSLContextSetCorrectly) {
 }
 
 TEST(OpenSSLSessionCache, InvalidLookupReturnsNullptr) {
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000)
+  SSL_CTX* ssl_ctx = SSL_CTX_new(DTLS_method());
+#else
   SSL_CTX* ssl_ctx = SSL_CTX_new(DTLSv1_2_client_method());
+#endif
 
   OpenSSLSessionCache session_cache(SSL_MODE_DTLS, ssl_ctx);
   EXPECT_EQ(session_cache.LookupSession("Invalid"), nullptr);
@@ -59,7 +81,11 @@ TEST(OpenSSLSessionCache, InvalidLookupReturnsNullptr) {
 }
 
 TEST(OpenSSLSessionCache, SimpleValidSessionLookup) {
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000)
+  SSL_CTX* ssl_ctx = SSL_CTX_new(DTLS_method());
+#else
   SSL_CTX* ssl_ctx = SSL_CTX_new(DTLSv1_2_client_method());
+#endif
   SSL_SESSION* ssl_session = SSL_SESSION_new(ssl_ctx);
 
   OpenSSLSessionCache session_cache(SSL_MODE_DTLS, ssl_ctx);
@@ -70,7 +96,11 @@ TEST(OpenSSLSessionCache, SimpleValidSessionLookup) {
 }
 
 TEST(OpenSSLSessionCache, AddToExistingReplacesPrevious) {
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000)
+  SSL_CTX* ssl_ctx = SSL_CTX_new(DTLS_method());
+#else
   SSL_CTX* ssl_ctx = SSL_CTX_new(DTLSv1_2_client_method());
+#endif
   SSL_SESSION* ssl_session_1 = SSL_SESSION_new(ssl_ctx);
   SSL_SESSION* ssl_session_2 = SSL_SESSION_new(ssl_ctx);
 

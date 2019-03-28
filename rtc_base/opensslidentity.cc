@@ -277,7 +277,14 @@ SSLIdentity* OpenSSLIdentity::FromPEMChainStrings(
     X509* x509 =
         PEM_read_bio_X509(bio, nullptr, nullptr, const_cast<char*>("\0"));
     if (x509 == nullptr) {
+    // josemrecio - this is probably a libwebrtc bug
+    // ERR_peek_last_error() should always be used, otherwise any previous error in the queue
+    //   will be read instead of potential PEM error
+#ifdef OPENSSL_IS_BORINGSSL
       uint32_t err = ERR_peek_error();
+#else
+      uint32_t err = ERR_peek_last_error();
+#endif
       if (ERR_GET_LIB(err) == ERR_LIB_PEM &&
           ERR_GET_REASON(err) == PEM_R_NO_START_LINE) {
         break;

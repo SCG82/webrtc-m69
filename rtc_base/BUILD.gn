@@ -56,7 +56,20 @@ if (!rtc_build_ssl) {
   config("external_ssl_library") {
     assert(rtc_ssl_root != "",
            "You must specify rtc_ssl_root when rtc_build_ssl==0.")
-    include_dirs = [ rtc_ssl_root ]
+    include_dirs = [ "$rtc_ssl_root/include" ]
+    # lib_dirs = [ "$rtc_ssl_root/lib" ]
+    if( is_win ) {
+      libs = [
+        "$rtc_ssl_root/lib/libcrypto.lib",
+        "$rtc_ssl_root/lib/libssl.lib"
+      ]
+    }
+    if( is_mac || is_linux || is_ios || is_android ) {
+      libs = [
+        "$rtc_ssl_root/lib/libssl.a",
+        "$rtc_ssl_root/lib/libcrypto.a",
+      ]
+    }
   }
 }
 
