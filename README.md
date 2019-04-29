@@ -15,10 +15,10 @@ See http://www.webrtc.org/native-code/development for instructions on how to get
 started developing with the native code.
 
 ``` bash
-gn gen out/Release --args='rtc_libvpx_build_vp9=true rtc_enable_sctp=true rtc_use_h264=true use_rtti=true rtc_build_examples=false rtc_include_tests=false is_debug=false rtc_builtin_ssl_root_certificates=true'
+gn gen out/Release --args='use_rtti=true rtc_use_h264=true proprietary_codecs=true ffmpeg_branding="Chrome" rtc_build_examples=false rtc_include_tests=false is_debug=false'
 
-# to build with OpenSSL 1.1.0g instead of BoringSSL
-# gn gen out/Release --args='use_rtti=true rtc_include_tests=false is_debug=false rtc_build_ssl=false rtc_ssl_root="../../obsdeps"'
+# to build with OpenSSL 1.1 (brew install openssl@1.1) instead of BoringSSL
+gn gen out/Release --args='use_rtti=true rtc_use_h264=true ffmpeg_branding="Chrome" rtc_build_examples=false rtc_include_tests=false is_debug=false rtc_build_ssl=false rtc_ssl_root="/usr/local/opt/openssl@1.1/include"'
 
 ninja -C out/Release
 
@@ -30,7 +30,6 @@ find . -iname "*.h" -exec rsync -R \{\} ../include/ \;
 cd out/Release/obj
 
 find . -iname "*.a" -exec rsync -R \{\} ../../../../lib/ \;
-#find . -iname "*.a" -exec cp \{\} ../../../../lib/ \; # if a library isn't found try this
 ```
 
 [Authoritative list](native-api.md) of directories that contain the
