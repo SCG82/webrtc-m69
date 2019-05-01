@@ -25,11 +25,9 @@ ninja -C out/Release
 mkdir ../include
 mkdir ../lib
 
-find . -iname "*.h" -exec rsync -R \{\} ../include/ \;
+rsync -avh --prune-empty-dirs --exclude="build" --exclude="out" --include="*/" --include="*.h" --exclude="*" ./* ../include/
 
-cd out/Release/obj
-
-find . -iname "*.a" -exec rsync -R \{\} ../../../../lib/ \;
+cp -p out/Release/obj/libwebrtc.a ../lib/
 ```
 
 [Authoritative list](native-api.md) of directories that contain the
