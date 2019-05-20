@@ -15,18 +15,32 @@ See http://www.webrtc.org/native-code/development for instructions on how to get
 started developing with the native code.
 
 ``` bash
-gn gen out/Release --args='use_rtti=true rtc_use_h264=true proprietary_codecs=true ffmpeg_branding="Chrome" rtc_build_examples=false rtc_include_tests=false is_debug=false'
+export DEV_DIR=~/dev # or any directory with full permissions
 
-# to build with OpenSSL 1.1 (brew install openssl@1.1) instead of BoringSSL
-gn gen out/Release --args='use_rtti=true rtc_use_h264=true ffmpeg_branding="Chrome" rtc_build_examples=false rtc_include_tests=false is_debug=false rtc_build_ssl=false rtc_ssl_root="/usr/local/opt/openssl@1.1/include"'
+mkdir $DEV_DIR && cd $DEV_DIR
+git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
 
+export "PATH=$PATH:$DEV_DIR/depot_tools"
+
+mkdir webrtc-checkout && cd webrtc-checkout
+fetch --nohooks webrtc
+gclient sync
+
+curl -L -O https://raw.githubusercontent.com/SCG82/webrtc-m69/m69/webrtc69.patch
+
+cd src
+git checkout -b m69 refs/remotes/branch-heads/69
+gclient sync
+
+git apply ../webrtc69.patch
+
+gn gen out/Release --args='use_rtti=true is_debug=false rtc_use_h264=true ffmpeg_branding="Chrome" rtc_include_tests=false'
 ninja -C out/Release
 
 mkdir ../include
 mkdir ../lib
 
 rsync -avh --prune-empty-dirs --exclude="build" --exclude="out" --include="*/" --include="*.h" --exclude="*" ./* ../include/
-
 cp -p out/Release/obj/libwebrtc.a ../lib/
 ```
 
