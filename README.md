@@ -14,7 +14,6 @@ amongst others.
 See http://www.webrtc.org/native-code/development for more information.
 
 ### Build from source
-* RECOMMENDED *
 
 Note: do not clone/download this repository
 
