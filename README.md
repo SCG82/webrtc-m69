@@ -9,10 +9,14 @@ all to communicate via a common set of protocols.
 The WebRTC initiative is a project supported by Google, Mozilla and Opera,
 amongst others.
 
-### Development
+## Development
 
-See http://www.webrtc.org/native-code/development for instructions on how to get
-started developing with the native code.
+See http://www.webrtc.org/native-code/development for more information.
+
+### Build from source
+* RECOMMENDED *
+
+Note: do not clone/download this repository
 
 ``` bash
 export DEV_DIR=~/dev # or any directory with full permissions
