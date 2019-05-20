@@ -37,7 +37,7 @@ gclient sync
 
 git apply ../webrtc69.patch
 
-gn gen out/Release --args='use_rtti=true is_debug=false rtc_use_h264=true ffmpeg_branding="Chrome" rtc_include_tests=false'
+gn gen out/Release --args='use_rtti=true is_debug=false rtc_use_h264=true use_openh264=true ffmpeg_branding="Chrome" rtc_include_tests=false rtc_build_examples=false'
 ninja -C out/Release
 
 mkdir ../include
